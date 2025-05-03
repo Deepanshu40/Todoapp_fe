@@ -122,6 +122,11 @@ const App = () => {
       {loading ? (
         <ActivityIndicator size="large" color="green" style={{marginTop: 40}} />
       ) : (
+        todos.length === 0 ? (
+          <Text style={{marginTop: 20, fontSize: 18, textAlign: 'center'}}>
+            No todos available.
+          </Text>
+        ) : 
         <FlatList
           data={todos}
           keyExtractor={item => item.id}
