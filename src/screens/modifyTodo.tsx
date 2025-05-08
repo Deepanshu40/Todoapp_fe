@@ -1,71 +1,59 @@
 // src/components/ModifyTodoModal.tsx
+import { useRoute } from '@react-navigation/native';
 import React, { useState, useEffect } from 'react';
 import {
-  Modal,
   View,
   TextInput,
   Text,
   Pressable,
-  StyleSheet
+  StyleSheet,
+  Alert
 } from 'react-native';
+import { updateTodo } from '../helper/api';
 
-interface Props {
-  visible: boolean;
-  onClose: () => void;
-  onUpdate: (id: string, title: string) => void;
-  todo: { id: string; title: string } | null;
-}
 
-const ModifyTodoModal = ({ visible, onClose, onUpdate, todo }: Props) => {
-  const [title, settitle] = useState('');
+const ModifyTodoModal = ({ navigation }: any) => {
+  const [todo, setTodo] = useState(useRoute()?.params?.todo || null);
 
   useEffect(() => {
-    if (todo) settitle(todo.title);
-  }, [todo]);
+    if (!todo) navigation.navigate('Home');
+  }, []);
 
-  const handleUpdate = () => {
-    if (title.trim()) {
-      onUpdate(todo!.id, title);
-      onClose();
+  const handleUpdate = async () => {
+    if (todo.title.trim()) {
+      await updateTodo(todo.id, todo.title)
+        Alert.alert('Success', 'Todo updated successfully!');
+      navigation.navigate('Home');
     }
   };
 
+
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.overlay}>
-        <View style={styles.modalContent}>
+        <View style={styles.container}>
           <Text style={styles.title}>Modify Todo</Text>
           <TextInput
-            value={title}
-            onChangeText={settitle}
+            value={todo.title}
+            onChangeText={(text) => setTodo({...todo, title: text})}
             placeholder="Update title..."
             style={styles.input}
           />
           <Pressable onPress={handleUpdate} style={styles.button}>
             <Text style={styles.buttonText}>Update</Text>
           </Pressable>
-          <Pressable onPress={onClose} style={[styles.button, { backgroundColor: '#aaa' }]}>
+          <Pressable style={[styles.button, { backgroundColor: '#aaa' }]}>
             <Text style={styles.buttonText}>Cancel</Text>
           </Pressable>
         </View>
-      </View>
-    </Modal>
   );
 };
 
 export default ModifyTodoModal;
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: '#000000aa',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  modalContent: {
+  container: {
+    padding: 30,
     backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 8,
+    flex: 1,
   },
   title: {
     fontSize: 18,
