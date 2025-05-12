@@ -1,6 +1,6 @@
 // src/components/ModifyTodoModal.tsx
 import { useRoute } from '@react-navigation/native';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import {
   View,
   TextInput,
@@ -9,11 +9,12 @@ import {
   StyleSheet,
   Alert
 } from 'react-native';
-import { updateTodo } from '../helper/api';
-
+import { useMutation } from '@apollo/client';
+import { UPDATE_TODO } from '../helper/graphql.api';
 
 const ModifyTodoModal = ({ navigation }: any) => {
   const [todo, setTodo] = useState(useRoute()?.params?.todo || null);
+  const [updateTodoMutation, {data}] = useMutation(UPDATE_TODO);
 
   useEffect(() => {
     if (!todo) navigation.navigate('Home');
@@ -21,7 +22,10 @@ const ModifyTodoModal = ({ navigation }: any) => {
 
   const handleUpdate = async () => {
     if (todo.title.trim()) {
-      await updateTodo(todo.id, todo.title)
+      await updateTodoMutation({variables: {id: todo.id, title: todo.title}});
+      if (data && data.updateTodo.success == false) {
+        return data.updateTodo.message === "Validation error" ? Alert.alert('Error', data.updateTodo.errors.join("\n")) : Alert.alert('Error', data.updateTodo.message);
+      }
         Alert.alert('Success', 'Todo updated successfully!');
       navigation.navigate('Home');
     }
@@ -40,7 +44,7 @@ const ModifyTodoModal = ({ navigation }: any) => {
           <Pressable onPress={handleUpdate} style={styles.button}>
             <Text style={styles.buttonText}>Update</Text>
           </Pressable>
-          <Pressable style={[styles.button, { backgroundColor: '#aaa' }]}>
+          <Pressable onPress={() => navigation.navigate("Home")} style={[styles.button, { backgroundColor: '#aaa' }]}>
             <Text style={styles.buttonText}>Cancel</Text>
           </Pressable>
         </View>

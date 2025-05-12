@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
 import { View, TextInput, Button, StyleSheet, Alert, Text } from 'react-native';
-import { addTodo } from '../helper/api';
+import { useMutation } from '@apollo/client';
+import { ADD_TODO } from '../helper/graphql.api';
 
 const AddTodoModal = ({ navigation }: any) => {
   const [input, setInput] = useState('');
-
+  const [addTodoMutation, {data}] = useMutation(ADD_TODO)
   const handleAdd = async () => {
     if (input.trim()) {
-      await addTodo(input.trim());
+      await addTodoMutation({variables: {title: input}});
+      if (data && data.createTodo.success == false) {
+        return data.createTodo.message === "Validation error" ? Alert.alert('Error', data.createTodo.errors.join("\n")) : Alert.alert('Error', data.createTodo.message);
+      }
+      setInput('');
       Alert.alert('Success', 'Todo added successfully!');
     }
   };

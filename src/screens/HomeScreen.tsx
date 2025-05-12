@@ -7,38 +7,30 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import React, {useCallback, useState} from 'react';
+import React, {useState} from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import ModifyTodoModal from '../screens/modifyTodo';
-import { getTodos, addTodo, updateTodo, deleteTodo } from '../helper/api';
-import { useFocusEffect } from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
+import {useQuery, useMutation} from '@apollo/client';
+import {GET_TODOS, DELETE_TODO} from '../helper/graphql.api';
 
-
-const HomeScreen = ({navigation} : any) => {
+const HomeScreen = () => {
   const [activeTab, setActiveTab] = useState('all');
-  const [todos, setTodos] = useState<{ id: string; title: string }[]>([]);
-  const [loading, setLoading] = useState(true);
+  const navigation = useNavigation();
+  
+  const {data, loading, error, refetch} = useQuery(GET_TODOS);
+  const [deleteTodoMutation, {data: deleteData}] = useMutation(DELETE_TODO);
 
-
-  const fetchTodos = async () => {
-    try {
-      setLoading(true);
-      const data = await getTodos();
-      setTodos(data);
-    } catch (err) {
-      console.error('Error fetching todos:', err);
-      Alert.alert('Error', 'Failed to fetch todos.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const todos = data?.getTodos?.data || [];
+  if (data && data.getTodos.success == false) {
+    return data.getTodos.message === "Validation error" ? Alert.alert('Error', data.getTodos.errors.join("\n")) : Alert.alert('Error', data.getTodos.message);  
+  }
 
   useFocusEffect(
-    useCallback(() => {
-      fetchTodos();
+    React.useCallback(() => {
+      setActiveTab('all');
+      refetch();
     }, [])
   );
-
 
   const handleDelete = async (id: string) => {
     Alert.alert('Delete', 'Are you sure?', [
@@ -48,17 +40,18 @@ const HomeScreen = ({navigation} : any) => {
         style: 'destructive',
         onPress: async () => {
           try {
-            await deleteTodo(id);
-            await fetchTodos();
+            await deleteTodoMutation({variables: {id}});
+            if (deleteData && deleteData.deleteTodo.success == false) {
+              return deleteData.deleteTodo.message === "Validation error" ? Alert.alert('Error', deleteData.deleteTodo.errors.join("\n")) : Alert.alert('Error', deleteData.deleteTodo.message);
+            }
+            refetch();
           } catch (err) {
-            console.error('Delete error:', err);
             Alert.alert('Error', 'Could not delete todo.');
           }
         },
       },
     ]);
   };
-
 
   return (
     <View style={styles.container}>
@@ -88,7 +81,7 @@ const HomeScreen = ({navigation} : any) => {
           renderItem={({item}) => (
             <View style={styles.todoItem}>
               <Text style={styles.todoText}>{item.title}</Text>
-                <View style={styles.iconGroup}>
+              <View style={styles.iconGroup}>
                 <Pressable onPress={() => navigation.navigate('ModifyToDo', {todo: item})}>
                   <Ionicons name="create-outline" size={22} color="orange" />
                 </Pressable>
@@ -101,13 +94,10 @@ const HomeScreen = ({navigation} : any) => {
         />
       )}
     </View>
-
   );
 };
 
-
 export default HomeScreen;
-
 const styles = StyleSheet.create({
   container: {
     padding: 30,
